@@ -1,0 +1,16 @@
+## jira-cli full
+## Include all source and skill files for context loading
+
+# Source code
+cmd/jira/**
+internal/**
+pkg/**
+
+# Agent skill (canonical)
+skills/jira/SKILL.md
+skills/jira/rules/*.md
+
+# Config
+go.mod
+Makefile
+README.md

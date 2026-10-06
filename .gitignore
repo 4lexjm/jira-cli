@@ -1,0 +1,28 @@
+# Build artifacts
+/bin/
+/jira
+dist/
+tmp/
+
+# promptcode exports
+promptcode_*.md
+
+# Go
+*.test
+*.out
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# AI agent configuration (track only skills for distribution)
+.claude/**
+!.claude/skills/
+!.claude/skills/**
+.agents/**
+!.agents/skills/
+!.agents/skills/**
