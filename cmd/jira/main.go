@@ -3,11 +3,10 @@ package main
 import (
 	"os"
 
+	"github.com/atlassian/jira-cli/internal/build"
 	"github.com/atlassian/jira-cli/internal/jiracmd"
 )
 
-var version = "dev"
-
 func main() {
-	os.Exit(jiracmd.Main(version))
+	os.Exit(jiracmd.Main(build.Version))
 }

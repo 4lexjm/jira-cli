@@ -10,7 +10,9 @@ LDFLAGS     = -X github.com/atlassian/jira-cli/internal/build.Version=$(VERSION)
 all: build
 
 build:
+	@mkdir -p $(BIN_DIR)
 	go build -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/$(BINARY_NAME) $(CMD_DIR)
+
 
 test:
 	go test ./...
@@ -32,6 +34,10 @@ clean:
 check-skills:
 	@bash scripts/check-generated-skill.sh
 
+check-generated-skill:
+	@bash scripts/check-generated-skill.sh
+
 # Regenerate .claude/skills/jira and .agents/skills/jira from skills/jira
 sync-skills:
 	@bash scripts/sync-skills.sh
+

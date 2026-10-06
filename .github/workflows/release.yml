@@ -1,0 +1,212 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 0.1.0 or v0.1.0)'
+        required: true
+        type: string
+      skip-skill-publish:
+        description: 'Skip publishing agent skills'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      release_ref: ${{ steps.version.outputs.release_ref }}
+      release_sha: ${{ steps.version.outputs.release_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version and ref
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            INPUT="${{ inputs.version }}"
+            TAG="v${INPUT#v}"
+            VERSION="${TAG#v}"
+            RELEASE_REF="${{ github.ref }}"
+            RELEASE_SHA="${{ github.sha }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+            VERSION="${TAG#v}"
+            RELEASE_REF="${GITHUB_REF}"
+            RELEASE_SHA="${{ github.sha }}"
+          fi
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_ref=${RELEASE_REF}" >> "$GITHUB_OUTPUT"
+          echo "release_sha=${RELEASE_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release version
+        run: ./scripts/check-release-version.sh "${{ steps.version.outputs.version }}"
+
+  verify:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build CLI
+        run: make build VERSION="${{ needs.prepare.outputs.tag }}"
+
+  release:
+    needs: [prepare, verify]
+    if: needs.prepare.result == 'success' && needs.verify.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      attestations: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.prepare.outputs.release_ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Create release tag if dispatched
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.release_sha }}
+        run: |
+          set -euo pipefail
+          git tag "$TAG" "$RELEASE_SHA" || true
+          git push origin "refs/tags/${TAG}" || true
+
+      - name: Extract release notes for this tag
+        shell: bash
+        env:
+          RELEASE_NOTES_PATH: ${{ runner.temp }}/RELEASE_NOTES.md
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          python3 - "$VERSION" "$RELEASE_NOTES_PATH" <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          version = sys.argv[1]
+          output_path = pathlib.Path(sys.argv[2])
+          text = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
+          pattern = re.compile(
+              rf"(?ms)^## \[{re.escape(version)}\] - \d{{4}}-\d{{2}}-\d{{2}}\n.*?(?=^## \[|\Z)"
+          )
+          match = pattern.search(text)
+          if not match:
+              output_path.write_text(f"Release {version}\n", encoding="utf-8")
+          else:
+              output_path.write_text(match.group(0).strip() + "\n", encoding="utf-8")
+          PY
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean --release-notes ${{ runner.temp }}/RELEASE_NOTES.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Collect attestation subjects
+        id: attestation_subjects
+        shell: bash
+        run: |
+          set -euo pipefail
+          subjects="$(find dist -maxdepth 1 -type f | sort)"
+          if [[ -z "$subjects" ]]; then
+            echo "::error::No release artifacts found to attest."
+            exit 1
+          fi
+          {
+            echo "subjects<<EOF"
+            printf '%s\n' "$subjects"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generate artifact attestation
+        uses: actions/attest@v2
+        continue-on-error: true
+        with:
+          subject-path: ${{ steps.attestation_subjects.outputs.subjects }}
+
+  skill-publish:
+    name: Publish skills
+    needs: [prepare, release]
+    if: >-
+      needs.release.result == 'success' &&
+      (github.event_name == 'push' || inputs.skip-skill-publish != 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install skild
+        run: npm install -g skild
+
+      - name: Configure skild auth
+        if: env.SKILD_SECRET != ''
+        env:
+          SKILD_SECRET: ${{ secrets.SKILD_AUTH_JSON }}
+        run: |
+          mkdir -p ~/.skild
+          echo '${{ secrets.SKILD_AUTH_JSON }}' > ~/.skild/registry-auth.json
+
+      - name: Verify release metadata
+        run: ./scripts/check-release-version.sh "${{ needs.prepare.outputs.version }}"
+
+      - name: Publish skills
+        if: env.SKILD_SECRET != ''
+        env:
+          SKILD_SECRET: ${{ secrets.SKILD_AUTH_JSON }}
+        run: |
+          TAG_VERSION="${{ needs.prepare.outputs.version }}"
+          FAILED=0
+          for dir in skills/*/; do
+            [ -f "$dir/SKILL.md" ] || continue
+            SKILL=$(basename "$dir")
+            VERSION="${TAG_VERSION}"
+            echo "Publishing $SKILL version $VERSION"
+            npx skild publish --dir "$dir" --skill-version "$VERSION" || FAILED=1
+          done
+          exit $FAILED

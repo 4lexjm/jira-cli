@@ -1,0 +1,12 @@
+# Default owners
+*       @4lexjm
+
+# Authentication & HTTP transports
+pkg/auth/    @4lexjm
+pkg/httpx/   @4lexjm
+
+# CLI commands
+pkg/cmd/     @4lexjm
+
+# Agent skill
+skills/jira/ @4lexjm

@@ -1,0 +1,135 @@
+# Gitleaks configuration for jira-cli
+# Reference: https://github.com/gitleaks/gitleaks
+
+title = "jira-cli gitleaks config"
+minVersion = "v8.25.0"
+
+[extend]
+# Extend the base config with all default rules
+useDefault = true
+
+[[allowlists]]
+description = "Allowlist for test fixtures and known false positives"
+regexTarget = "secret"
+
+# Paths to exclude from scanning
+paths = [
+  '''\.gitleaks\.toml$''',
+  '''(.*?)(jpg|gif|doc|pdf|bin|png|svg)$''',
+  '''testdata\/''',
+  '''fixtures\/''',
+  '''go\.(mod|sum)$''',
+  '''vendor\.json''',
+  '''package-lock\.json''',
+  '''package\.json''',
+  '''node_modules\/''',
+]
+
+# Common test values and patterns that are not real secrets
+regexes = [
+  '''test-api-key''',
+  '''fake-token''',
+  '''dummy-secret''',
+  '''example\.com''',
+  '''localhost''',
+  '''127\.0\.0\.1''',
+  '''192\.168\..*''',
+  '''0\.0\.0\.0''',
+]
+
+# Allow placeholder values
+stopwords = [
+  "EXAMPLE",
+  "example",
+  "CHANGEME",
+  "changeme",
+  "PLACEHOLDER",
+  "placeholder",
+]
+
+# ============================================================================
+# Custom rules for Jira/Atlassian-specific secrets
+# ============================================================================
+
+[[rules]]
+id = "atlassian-api-token"
+description = "Atlassian Cloud API Token"
+regex = '''(?i)(jira|atlassian)[_-]?(api[_-]?)?token\s*[:=]\s*['"]?([A-Za-z0-9_-]{20,})['"]?'''
+entropy = 3.5
+secretGroup = 3
+keywords = ["jira", "atlassian", "token"]
+
+[[rules]]
+id = "jira-pat"
+description = "Jira Personal Access Token"
+regex = '''(?i)(jira[_-]?)?(pat|personal[_-]?access[_-]?token)\s*[:=]\s*['"]?([A-Za-z0-9]{20,})['"]?'''
+entropy = 3.5
+secretGroup = 3
+keywords = ["jira", "pat"]
+
+# ============================================================================
+# Generic credential detection rules
+# ============================================================================
+
+[[rules]]
+description = "Authorization Bearer tokens"
+id = "authorization-bearer-token"
+regex = '''(?i)Bearer(?:\s)+(\S{8,})'''
+secretGroup = 1
+entropy = 3.8
+tags = ["key", "HTTP", "bearer"]
+
+[[rules]]
+description = "Hardcoded credentials in Go files"
+id = "credentials-go"
+path = '''(.*?)\.go$'''
+regex = '''(?i)(?:secret|key|password|pwd|pass|token)(?:\w|\s*?)(?:=|:=)(?:\s*?)["'`](.{4,120}?)["'`]'''
+secretGroup = 1
+entropy = 3
+tags = ["credentials", "hardcoded", "go"]
+
+[[rules]]
+description = "Hardcoded credentials in Shell scripts"
+id = "credentials-shell"
+path = '''(.*?)\.(sh|bash|zsh)$'''
+regex = '''(?i)(?:secret|key|password|pwd|pass|token)(?:.{0,20})(?:=){1}(?:\s)*?["']?(.{4,120})["']?'''
+secretGroup = 1
+entropy = 3
+tags = ["credentials", "hardcoded", "shell"]
+
+[[rules]]
+description = "Hardcoded credentials in YAML files (quoted)"
+id = "credentials-yaml-quoted"
+path = '''(.*?)\.ya?ml$'''
+regex = '''(?i)(?:secret|key|password|pwd|pass|token)(?:.{0,20})(?::){1}(?:\s{0,10})(?:["'](.{4,120})["'])'''
+secretGroup = 1
+entropy = 3
+tags = ["credentials", "hardcoded", "yaml"]
+[[rules.allowlists]]
+description = "Skip YAML variables and encrypted values"
+regexes = [
+  '''\${(?:.)+}''',
+  '''{{(?:.)*?}}''',
+]
+
+[[rules]]
+description = "Hardcoded credentials in .env files"
+id = "credentials-env"
+path = '''(.*?)\.env(\..*)?$'''
+regex = '''(?i)(?:secret|key|password|pwd|pass|token|api_key|apikey)(?:\w*)=["']?([^"'\s\n]{8,})["']?'''
+secretGroup = 1
+entropy = 2.5
+tags = ["credentials", "hardcoded", "env"]
+[[rules.allowlists]]
+description = "Skip example env files and placeholders"
+paths = [
+  '''\.env\.example$''',
+  '''\.env\.sample$''',
+  '''\.env\.template$''',
+]
+regexes = [
+  '''CHANGEME''',
+  '''PLACEHOLDER''',
+  '''your-.*-here''',
+  '''<.*>''',
+]
