@@ -27,6 +27,9 @@ paths = [
 
 # Common test values and patterns that are not real secrets
 regexes = [
+  '''my-personal-access-token''',
+  '''my-api-token''',
+  '''my-pat''',
   '''test-api-key''',
   '''fake-token''',
   '''dummy-secret''',

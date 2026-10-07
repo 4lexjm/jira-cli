@@ -17,8 +17,8 @@ func Main(version string) int {
 	f := &cmdutil.Factory{
 		AppVersion:     version,
 		ExecutableName: "jira",
-		IOStreams:       ios,
-		Config:          config.Load,
+		IOStreams:      ios,
+		Config:         config.Load,
 	}
 
 	// Honour JIRA_HTTP_DEBUG globally.

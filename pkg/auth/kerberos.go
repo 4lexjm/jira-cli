@@ -3,6 +3,7 @@ package auth
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/jcmturner/gokrb5/v8/client"
 	"github.com/jcmturner/gokrb5/v8/config"
@@ -27,24 +28,32 @@ type KerberosTransport struct {
 	krb5Client *client.Client
 }
 
+// loadKrb5Config attempts to load krb5.conf from KRB5_CONFIG env var, standard
+// system locations, or returns an initialized default config if none is found.
+func loadKrb5Config() (*config.Config, error) {
+	if cfgPath := os.Getenv("KRB5_CONFIG"); cfgPath != "" {
+		return config.Load(cfgPath)
+	}
+	for _, path := range []string{"/etc/krb5.conf", "/etc/krb5/krb5.conf"} {
+		if _, err := os.Stat(path); err == nil {
+			return config.Load(path)
+		}
+	}
+	return config.New(), nil
+}
+
 // NewKerberosTransport creates a KerberosTransport by loading the current
 // user's Kerberos credential cache from the system's default ccache location
 // (controlled by the KRB5CCNAME environment variable or the system default,
 // e.g. /tmp/krb5cc_<uid> on Linux or the in-memory cache on macOS).
-//
-// The krb5.conf path defaults to the OS standard (/etc/krb5.conf on Linux/macOS).
 func NewKerberosTransport(inner http.RoundTripper) (*KerberosTransport, error) {
 	if inner == nil {
 		inner = http.DefaultTransport
 	}
 
-	// Load the system krb5.conf.
-	krb5Conf, err := config.NewFromSystem()
+	krb5Conf, err := loadKrb5Config()
 	if err != nil {
-		return nil, fmt.Errorf(
-			"load krb5.conf: %w\n"+
-				"Hint: ensure /etc/krb5.conf exists and your realm is configured.\n"+
-				"On macOS check /Library/Preferences/edu.mit.Kerberos", err)
+		return nil, fmt.Errorf("load krb5.conf: %w", err)
 	}
 
 	// Load the credential cache. Uses KRB5CCNAME env var if set,
@@ -71,9 +80,6 @@ func NewKerberosTransport(inner http.RoundTripper) (*KerberosTransport, error) {
 // transparently re-sends the request with the `Authorization: Negotiate <token>`
 // header derived from the Kerberos TGS ticket for the target service.
 func (t *KerberosTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	// spnego.NewSPNEGOClient wraps the krb5 client into an SPNEGO-aware
-	// http.Client that handles the Negotiate challenge/response cycle.
-	spnegoClient := spnego.NewSPNEGOClient(t.krb5Client, req.URL.Host)
 	wrapped := spnego.NewClient(t.krb5Client, &http.Client{Transport: t.inner}, "")
 
 	// Build a shallow copy of the request so we can safely set headers.
@@ -81,13 +87,11 @@ func (t *KerberosTransport) RoundTrip(req *http.Request) (*http.Response, error)
 
 	resp, err := wrapped.Do(clone)
 	if err != nil {
-		// Provide a more actionable error message than the raw SPNEGO error.
 		if isTicketExpired(err) {
 			return nil, &KerberosExpiredError{cause: err}
 		}
 		return nil, fmt.Errorf("SPNEGO round-trip: %w", err)
 	}
-	_ = spnegoClient // referenced to avoid import pruning
 	return resp, nil
 }
 

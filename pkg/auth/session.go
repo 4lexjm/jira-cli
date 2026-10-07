@@ -39,18 +39,18 @@ func (e *SessionExpiredError) Error() string {
 //
 // # Lifecycle
 //
-// 1. The user runs `jira auth login <host> --browser`.
-// 2. The CLI starts a local reverse-proxy on localhost:<port>.
-// 3. The browser is directed to localhost:<port>/login.jsp.
-// 4. The user completes SSO normally; Jira sets JSESSIONID in the response.
-// 5. The reverse-proxy captures the Set-Cookie header and stores the value
-//    in the OS keychain (never on disk).
-// 6. Subsequent CLI calls attach `Cookie: JSESSIONID=<value>` to every request.
-// 7. On expiry (401 or Location redirect to the IdP) the CLI surfaces a
-//    SessionExpiredError with renewal instructions.
+//  1. The user runs `jira auth login <host> --browser`.
+//  2. The CLI starts a local reverse-proxy on localhost:<port>.
+//  3. The browser is directed to localhost:<port>/login.jsp.
+//  4. The user completes SSO normally; Jira sets JSESSIONID in the response.
+//  5. The reverse-proxy captures the Set-Cookie header and stores the value
+//     in the OS keychain (never on disk).
+//  6. Subsequent CLI calls attach `Cookie: JSESSIONID=<value>` to every request.
+//  7. On expiry (401 or Location redirect to the IdP) the CLI surfaces a
+//     SessionExpiredError with renewal instructions.
 type SessionTransport struct {
-	inner   http.RoundTripper
-	host    string
+	inner     http.RoundTripper
+	host      string
 	getCookie func() (string, error)
 }
 
@@ -127,7 +127,7 @@ func isSessionExpired(resp *http.Response) bool {
 
 // BrowserLoginResult holds the captured session after a browser SSO flow.
 type BrowserLoginResult struct {
-	Cookie    string    // JSESSIONID value
+	Cookie     string    // JSESSIONID value
 	CapturedAt time.Time // when the cookie was captured
 }
 

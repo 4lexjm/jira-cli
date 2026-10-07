@@ -13,6 +13,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	jiracfg "github.com/atlassian/jira-cli/internal/config"

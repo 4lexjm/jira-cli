@@ -1,0 +1,7 @@
+# Gitleaks ignore file
+# Add fingerprints of known false positives here
+# Format: one fingerprint per line
+
+e70c956d824aab9903d8fd6f559c54e42d66f1d3:.agents/skills/jira/rules/headless.md:atlassian-api-token:29
+e70c956d824aab9903d8fd6f559c54e42d66f1d3:.claude/skills/jira/rules/headless.md:atlassian-api-token:29
+e70c956d824aab9903d8fd6f559c54e42d66f1d3:skills/jira/rules/headless.md:atlassian-api-token:29

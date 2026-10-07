@@ -14,7 +14,7 @@ type Factory struct {
 	ExecutableName string
 
 	IOStreams *iostreams.IOStreams
-	Config   func() (*config.Config, error)
+	Config    func() (*config.Config, error)
 
 	Browser browser.Browser
 

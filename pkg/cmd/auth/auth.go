@@ -14,7 +14,6 @@ import (
 	"github.com/atlassian/jira-cli/internal/config"
 	"github.com/atlassian/jira-cli/internal/secret"
 	"github.com/atlassian/jira-cli/pkg/auth"
-	"github.com/atlassian/jira-cli/pkg/browser"
 	"github.com/atlassian/jira-cli/pkg/cmdutil"
 	"github.com/atlassian/jira-cli/pkg/iostreams"
 )

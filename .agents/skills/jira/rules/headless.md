@@ -26,7 +26,7 @@ jira issue list
 
 # Jira Data Center — PAT bearer (recommandé)
 export JIRA_HOST=https://jira.example.com
-export JIRA_TOKEN=my-personal-access-token
+export JIRA_TOKEN=my-pat
 export JIRA_PROJECT=ABC
 jira issue list
 
