@@ -13,7 +13,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	jiracfg "github.com/atlassian/jira-cli/internal/config"
@@ -42,10 +41,6 @@ type Client struct {
 		InitialBackoff time.Duration
 		MaxBackoff     time.Duration
 	}
-
-	// rate limit tracking
-	rateMu sync.RWMutex
-	rate   RateLimit
 }
 
 // RateLimit captures the last observed X-RateLimit-* headers.
