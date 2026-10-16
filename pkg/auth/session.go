@@ -91,7 +91,7 @@ func (t *SessionTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 
 	// Detect session expiry: Jira redirects to the IdP or returns 401.
 	if isSessionExpired(resp) {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, &SessionExpiredError{Host: t.host}
 	}
 

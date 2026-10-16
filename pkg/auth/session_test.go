@@ -32,7 +32,7 @@ func TestSessionTransport_AttachesCookie(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Assert: JSESSIONID is present in the Cookie header.
 	if !strings.Contains(receivedCookie, "JSESSIONID=MYSESSIONID123") {
@@ -115,7 +115,7 @@ func TestSessionTransport_MergesExistingCookies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Both cookies must be present.
 	if !strings.Contains(receivedCookie, "existingCookie=abc") {

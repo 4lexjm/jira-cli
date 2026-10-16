@@ -23,7 +23,7 @@ func Main(version string) int {
 
 	// Honour JIRA_HTTP_DEBUG globally.
 	if os.Getenv("JIRA_HTTP_DEBUG") == "1" {
-		os.Setenv("JIRA_HTTP_DEBUG", "1")
+		_ = os.Setenv("JIRA_HTTP_DEBUG", "1")
 	}
 
 	rootCmd := root.NewCmdRoot(f, version)
