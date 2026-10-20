@@ -1,12 +1,12 @@
 module github.com/atlassian/jira-cli
 
-go 1.22
+go 1.26.0
 
 require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/spf13/cobra v1.10.2
 	github.com/zalando/go-keyring v0.2.8
-	golang.org/x/term v0.22.0
+	golang.org/x/term v0.47.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -23,5 +23,5 @@ require (
 	github.com/spf13/pflag v1.0.9 // indirect
 	golang.org/x/crypto v0.24.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 )
