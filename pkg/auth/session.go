@@ -156,16 +156,12 @@ func CaptureSessionViaBrowser(ctx context.Context, jiraBaseURL string, b browser
 	// Capture channel — buffered so the proxy goroutine never blocks.
 	cookieCh := make(chan string, 1)
 
-	// Build the reverse proxy.
-	proxy := httputil.NewSingleHostReverseProxy(target)
-
-	// Override the Director to rewrite the Host header so Jira accepts the request.
-	originalDirector := proxy.Director
-	proxy.Director = func(req *http.Request) {
-		originalDirector(req)
-		req.Host = target.Host
-		// Strip the proxy's own Cookie header so we don't confuse Jira.
-		req.Header.Del("X-Forwarded-For")
+	// Build the reverse proxy and rewrite the Host header so Jira accepts the request.
+	proxy := &httputil.ReverseProxy{
+		Rewrite: func(preq *httputil.ProxyRequest) {
+			preq.SetURL(target)
+			preq.Out.Host = target.Host
+		},
 	}
 
 	// ModifyResponse intercepts every response from Jira and checks for JSESSIONID.

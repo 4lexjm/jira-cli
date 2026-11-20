@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.22'
+          go-version: '1.26'
 
       - name: Check skill sync
         run: make check-skills
@@ -42,7 +42,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.22'
+          go-version: '1.26'
 
       - name: Verify gofmt
         run: |
@@ -92,7 +92,7 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.22'
+          go-version: '1.26'
 
       - name: Install GNU Make
         run: choco install make --no-progress -y
